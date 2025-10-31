@@ -4,7 +4,7 @@ window.__GM_LOCALES__['uk'] = {
   "gm.toast.meta": "#АКТ-НЕВИДИМОСТІ",
   "header.logo": "М†",
   "header.wordmark": "InterDead™",
-  "meta.title": "InterDead — структурований BEM-лендинг",
+  "meta.title": "InterDead -- Месенджер для мертвих",
   "meta.description": "InterDead — «Мессенджер для мертвых» із захищеним каналом шепотів. Долучайтеся до закритої бети й ловіть сигнали з-за межі.",
   "meta.ogImageAlt": "Емблема InterDead",
   "header.menu.features": "Спектральні функції",

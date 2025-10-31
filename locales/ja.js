@@ -4,7 +4,7 @@ window.__GM_LOCALES__['ja'] = {
   "gm.toast.meta": "#不可視化処理",
   "header.logo": "М†",
   "header.wordmark": "InterDead™",
-  "meta.title": "InterDead — 構造化BEMランディング",
+  "meta.title": "InterDead -- 死者のためのメッセンジャー",
   "meta.description": "InterDead — «Мессенджер для мертвых»として囁かれてきた暗号化ブリッジ。クローズドベータに参加し、彼岸からの信号を追跡しよう。",
   "meta.ogImageAlt": "InterDeadのエンブレム",
   "header.menu.features": "機能",

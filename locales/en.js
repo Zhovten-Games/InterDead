@@ -4,7 +4,7 @@ window.__GM_LOCALES__['en'] = {
   "gm.toast.meta": "#ACT-OF-INVISIBILITY",
   "header.logo": "М†",
   "header.wordmark": "InterDead™",
-  "meta.title": "InterDead — structured BEM landing",
+  "meta.title": "InterDead -- Messenger for the dead",
   "meta.description": "InterDead — the encrypted bridge once whispered as “Messenger for the dead.” Join the closed beta to trace signals from beyond.",
   "meta.ogImageAlt": "InterDead emblem",
   "header.menu.features": "Spectral features",

@@ -271,6 +271,151 @@
   const DEFAULT_LANG = 'en';
   const langSelect = document.getElementById('gm-lang');
 
+  class HtmlSanitizer {
+    constructor(options = {}) {
+      const defaultTags = ['A', 'BR', 'EM', 'STRONG', 'SPAN'];
+      const defaultAttributes = {
+        '*': ['class'],
+        A: ['href', 'target', 'rel', 'title', 'class'],
+        SPAN: ['title', 'class'],
+      };
+      const defaultSchemes = ['http', 'https', 'mailto', 'tel'];
+      const defaultTargets = ['_blank', '_self', '_parent', '_top'];
+      const defaultRelTokens = ['noopener', 'noreferrer', 'nofollow'];
+
+      this.allowedTags = new Set(
+        (options.allowedTags || defaultTags).map((tag) => String(tag).toUpperCase())
+      );
+      this.allowedAttributes = new Map();
+      const attributeConfig = options.allowedAttributes || defaultAttributes;
+      Object.entries(attributeConfig).forEach(([tag, attrs]) => {
+        const key = tag === '*' ? '*' : String(tag).toUpperCase();
+        this.allowedAttributes.set(
+          key,
+          new Set((attrs || []).map((attr) => String(attr).toLowerCase()))
+        );
+      });
+      this.allowedSchemes = new Set(
+        (options.allowedSchemes || defaultSchemes).map((scheme) => String(scheme).toLowerCase())
+      );
+      this.allowedTargets = new Set(
+        (options.allowedTargets || defaultTargets).map((target) => String(target).toLowerCase())
+      );
+      this.allowedRelTokens = new Set(
+        (options.allowedRelTokens || defaultRelTokens).map((token) => String(token).toLowerCase())
+      );
+    }
+
+    sanitize(html) {
+      if (typeof html !== 'string') {
+        return '';
+      }
+      const template = document.createElement('template');
+      template.innerHTML = html;
+      const elements = [];
+      const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT);
+      while (walker.nextNode()) {
+        elements.push(walker.currentNode);
+      }
+      elements.forEach((node) => {
+        const tagName = node.tagName;
+        if (!this.allowedTags.has(tagName)) {
+          node.replaceWith(document.createTextNode(node.textContent || ''));
+          return;
+        }
+        const allowedAttrs = this.getAllowedAttributes(tagName);
+        Array.from(node.attributes).forEach((attr) => {
+          const name = attr.name.toLowerCase();
+          if (!allowedAttrs.has(name)) {
+            node.removeAttribute(attr.name);
+            return;
+          }
+          if (name === 'href' && !this.isSafeUrl(attr.value)) {
+            node.removeAttribute(attr.name);
+            return;
+          }
+          if (name === 'target' && !this.isAllowedTarget(attr.value)) {
+            node.removeAttribute(attr.name);
+            return;
+          }
+          if (name === 'rel') {
+            const normalized = this.normalizeRelTokens(attr.value);
+            if (normalized) {
+              node.setAttribute(attr.name, normalized);
+            } else {
+              node.removeAttribute(attr.name);
+            }
+          }
+        });
+        if (
+          node.tagName === 'A' &&
+          node.getAttribute('target') === '_blank' &&
+          !node.hasAttribute('rel')
+        ) {
+          node.setAttribute('rel', 'noopener');
+        }
+      });
+      return template.innerHTML;
+    }
+
+    getAllowedAttributes(tagName) {
+      const attrs = new Set();
+      const globalAttrs = this.allowedAttributes.get('*');
+      const specificAttrs = this.allowedAttributes.get(tagName);
+      if (globalAttrs) {
+        globalAttrs.forEach((attr) => attrs.add(attr));
+      }
+      if (specificAttrs) {
+        specificAttrs.forEach((attr) => attrs.add(attr));
+      }
+      return attrs;
+    }
+
+    isSafeUrl(value) {
+      if (typeof value !== 'string') {
+        return false;
+      }
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return false;
+      }
+      if (trimmed.startsWith('#') || trimmed.startsWith('/')) {
+        return true;
+      }
+      try {
+        const url = new URL(trimmed, document.baseURI);
+        const protocol = url.protocol.replace(':', '').toLowerCase();
+        return this.allowedSchemes.has(protocol);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    isAllowedTarget(value) {
+      if (typeof value !== 'string') {
+        return false;
+      }
+      return this.allowedTargets.has(value.toLowerCase());
+    }
+
+    normalizeRelTokens(value) {
+      if (typeof value !== 'string') {
+        return '';
+      }
+      const tokens = value
+        .split(/\s+/)
+        .map((token) => token.trim().toLowerCase())
+        .filter((token) => token && this.allowedRelTokens.has(token));
+      if (tokens.length === 0) {
+        return '';
+      }
+      const unique = Array.from(new Set(tokens));
+      return unique.join(' ');
+    }
+  }
+
+  const htmlSanitizer = new HtmlSanitizer();
+
   class LocaleRepository {
     constructor(initialLocales = {}, loaders = []) {
       this.cache = new Map();
@@ -330,7 +475,8 @@
       document.querySelectorAll('[data-i18n-html]').forEach((el) => {
         const key = el.getAttribute('data-i18n-html');
         if (key && Object.prototype.hasOwnProperty.call(map, key)) {
-          el.innerHTML = map[key];
+          const sanitized = htmlSanitizer.sanitize(map[key]);
+          el.innerHTML = sanitized;
         }
       });
       document.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -381,7 +527,7 @@
     document.querySelectorAll('[data-i18n-html]').forEach((el) => {
       const key = el.getAttribute('data-i18n-html');
       if (key) {
-        map[key] = el.innerHTML ?? '';
+        map[key] = htmlSanitizer.sanitize(el.innerHTML ?? '');
       }
     });
     document.querySelectorAll('[data-i18n]').forEach((el) => {
